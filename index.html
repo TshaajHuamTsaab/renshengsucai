@@ -8,11 +8,10 @@
 html,body{margin:0;padding:0;width:100%;height:100%;overflow:hidden;font-family:"Microsoft YaHei",sans-serif;}
 body{background:url('https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExYzdwYXd1dGcxbHloc3UwYjM3a2lpdnVhbHA5bnJrNWVpenc5dmltMiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/FUESbiqyQcJBcwFefb/giphy.gif') center/cover no-repeat fixed;}
 .overlay{position:absolute;inset:0;background:rgba(0,0,0,0.4);z-index:0;}
-
 #content{position:relative;z-index:1;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:white;padding:20px;}
 h1{font-size:3em;margin-bottom:20px;text-shadow:2px 2px 8px rgba(0,0,0,0.7);}
 .line{margin:10px 0;font-size:1.5em;text-shadow:1px 1px 4px rgba(0,0,0,0.7);}
-
+#pageNumber{margin-top:10px;font-size:1em;color:#ccc;}
 #controls{position:absolute;top:10px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;z-index:2;}
 button{padding:8px 16px;font-weight:bold;font-size:1em;border:none;border-radius:8px;cursor:pointer;}
 #playBtn{background:green;color:white;}
@@ -21,13 +20,10 @@ button{padding:8px 16px;font-weight:bold;font-size:1em;border:none;border-radius
 #increase{background:#fff;color:#0b6fc2;}
 #decrease{background:#fff;color:#0b6fc2;}
 #addPage,#addBook,#viewBook{background:#fff;color:#0b6fc2;}
-
 #navArrows{position:absolute;top:50%;width:100%;display:flex;justify-content:space-between;transform:translateY(-50%);z-index:2;font-size:3em;color:white;user-select:none;}
 #navArrows span{cursor:pointer;user-select:none;padding:0 20px;}
-
 #bookList{position:absolute;bottom:10px;right:10px;display:flex;gap:8px;flex-wrap:wrap;z-index:2;}
 .bookIcon{width:50px;height:50px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid white;}
-
 /* 弹窗表单 */
 #formOverlay{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);display:none;align-items:center;justify-content:center;z-index:3;}
 .formBox{background:#fff;padding:20px;border-radius:12px;min-width:300px;color:black;display:flex;flex-direction:column;gap:10px;}
@@ -51,6 +47,7 @@ button{padding:8px 16px;font-weight:bold;font-size:1em;border:none;border-radius
 <div id="content">
   <h1 id="title"></h1>
   <div id="lines"></div>
+  <div id="pageNumber"></div>
 </div>
 
 <div id="navArrows">
@@ -143,6 +140,7 @@ let currentPage=0, fontSize=1.5, reading=false, lineIndex=0;
 
 const titleEl=document.getElementById("title");
 const linesEl=document.getElementById("lines");
+const pageNumberEl=document.getElementById("pageNumber");
 
 // ========== 永久保存功能 ==========
 function saveData(){
@@ -155,14 +153,12 @@ function loadData(){
   if(savedPages){ pages = savedPages; }
   if(savedBooks){ books = savedBooks; renderBooks(); }
 }
-loadData(); // 页面加载时恢复数据
-// ==================================
+loadData();
 
 // ---------- 渲染页面 ----------
 function renderPage(){
   titleEl.textContent = pages[currentPage].title;
   linesEl.innerHTML = "";
-
   pages[currentPage].lines.forEach(line => {
     const div = document.createElement("div");
     div.className = "line";
@@ -170,21 +166,7 @@ function renderPage(){
     div.innerHTML = line.split("").map(c => `<span>${c}</span>`).join("");
     linesEl.appendChild(div);
   });
-
-  if(pages[currentPage].deletable){
-    const delBtn = document.createElement("button");
-    delBtn.textContent = "删除本页面";
-    delBtn.style.marginTop = "10px";
-    delBtn.onclick = () => {
-      if(confirm("确认删除本页面吗？")){
-        pages.splice(currentPage,1);
-        currentPage = Math.max(0,currentPage-1);
-        saveData();
-        renderPage();
-      }
-    }
-    linesEl.appendChild(delBtn);
-  }
+  pageNumberEl.textContent = `第 ${currentPage+1} 页 / 共 ${pages.length} 页`;
 }
 renderPage();
 
@@ -199,21 +181,14 @@ document.getElementById("decrease").onclick=()=>{fontSize=Math.max(0.8,fontSize-
 // ---------- 播放朗读 ----------
 let synth = window.speechSynthesis;
 let utterance;
-
 function speakLine(){
   if(!reading || lineIndex>=pages[currentPage].lines.length){stopReading();return;}
   const lineDiv = linesEl.children[lineIndex];
   const spans = Array.from(lineDiv.querySelectorAll("span"));
-
   utterance = new SpeechSynthesisUtterance(pages[currentPage].lines[lineIndex]);
   utterance.lang="zh-CN";
   utterance.rate=0.9;
   utterance.pitch=1;
-
-  const voices=synth.getVoices();
-  const male = voices.find(v=>v.lang.includes("zh")&&/male|liang|jie|chen/i.test(v.name));
-  if(male) utterance.voice = male;
-
   utterance.onboundary = (event)=>{
     if(event.charIndex!==undefined){
       spans.forEach(s=>s.style.color="white");
@@ -228,7 +203,6 @@ function speakLine(){
   }
   synth.speak(utterance);
 }
-
 function stopReading(){
   reading=false;
   synth.cancel();
@@ -268,7 +242,6 @@ const cancelBtn=document.getElementById("formCancel");
 const formTitle=document.getElementById("formTitle");
 const bookList=document.getElementById("bookList");
 let currentForm="";
-
 function showForm(type){
   currentForm=type;
   formOverlay.style.display="flex";
@@ -276,7 +249,6 @@ function showForm(type){
   input1.style.display="none";
   input2.style.display="none";
   input3.style.display="none";
-
   if(type==="page"){
     formTitle.textContent="添加页面";
     input1.style.display="block"; input1.placeholder="页面标题";
@@ -292,7 +264,6 @@ function showForm(type){
   }
 }
 cancelBtn.onclick=()=>{formOverlay.style.display="none";}
-
 submitBtn.onclick = () => {
   if(currentForm==="page"){
     const title = input1.value.trim();
@@ -318,7 +289,6 @@ submitBtn.onclick = () => {
   formOverlay.style.display="none";
   input1.value=""; input2.value=""; input3.value=""; textarea.value="";
 }
-
 function renderBooks(){
   bookList.innerHTML="";
   books.forEach(b=>{
@@ -328,7 +298,6 @@ function renderBooks(){
     bookList.appendChild(img);
   });
 }
-
 document.getElementById("addPage").onclick=()=>{showForm("page");}
 document.getElementById("addBook").onclick=()=>{showForm("book");}
 document.getElementById("viewBook").onclick=()=>{showForm("viewBook");}
