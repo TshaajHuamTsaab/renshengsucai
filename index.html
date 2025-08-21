@@ -144,6 +144,20 @@ let currentPage=0, fontSize=1.5, reading=false, lineIndex=0;
 const titleEl=document.getElementById("title");
 const linesEl=document.getElementById("lines");
 
+// ========== 永久保存功能 ==========
+function saveData(){
+  localStorage.setItem("customPages", JSON.stringify(pages));
+  localStorage.setItem("customBooks", JSON.stringify(books));
+}
+function loadData(){
+  const savedPages = JSON.parse(localStorage.getItem("customPages"));
+  const savedBooks = JSON.parse(localStorage.getItem("customBooks"));
+  if(savedPages){ pages = savedPages; }
+  if(savedBooks){ books = savedBooks; renderBooks(); }
+}
+loadData(); // 页面加载时恢复数据
+// ==================================
+
 // ---------- 渲染页面 ----------
 function renderPage(){
   titleEl.textContent = pages[currentPage].title;
@@ -157,7 +171,6 @@ function renderPage(){
     linesEl.appendChild(div);
   });
 
-  // 仅可删除页面显示删除按钮
   if(pages[currentPage].deletable){
     const delBtn = document.createElement("button");
     delBtn.textContent = "删除本页面";
@@ -166,6 +179,7 @@ function renderPage(){
       if(confirm("确认删除本页面吗？")){
         pages.splice(currentPage,1);
         currentPage = Math.max(0,currentPage-1);
+        saveData();
         renderPage();
       }
     }
@@ -222,7 +236,7 @@ function stopReading(){
   Array.from(document.querySelectorAll(".line span")).forEach(s=>s.style.color="white");
 }
 
-// ---------- Play / Stop 按钮 ----------
+// ---------- Play / Stop ----------
 document.getElementById("playBtn").onclick=()=>{
   if(!reading){
     reading=true;
@@ -243,7 +257,7 @@ document.getElementById("stopBtn").onclick=()=>{
   }
 }
 
-// ---------- 添加页面/书籍/查看书籍 ----------
+// ---------- 添加页面/书籍 ----------
 const formOverlay=document.getElementById("formOverlay");
 const input1=document.getElementById("formInput1");
 const input2=document.getElementById("formInput2");
@@ -284,8 +298,9 @@ submitBtn.onclick = () => {
     const title = input1.value.trim();
     const linesArr = textarea.value.split(/\n|,/).map(s => s.trim()).filter(s => s);
     if(title && linesArr.length>0){
-      pages.push({title, lines: linesArr, deletable:true}); // 新页面可删除
+      pages.push({title, lines: linesArr, deletable:true});
       currentPage = pages.length-1;
+      saveData();
       renderPage();
       alert("页面已添加！");
     }
@@ -295,6 +310,7 @@ submitBtn.onclick = () => {
     const img = input3.value.trim();
     if(title && url && img){
       books.push({title,url,img});
+      saveData();
       renderBooks();
       alert("书籍已添加！");
     }
